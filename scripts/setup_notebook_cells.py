@@ -32,6 +32,7 @@ EXTRA_DATASETS = []  # Only add fallback_choice/noul/score if an audit needs one
 SEED = 0
 SCALING_QUERIES = 512
 RESTORE_WITHHELD_STATES = True
+DOWNLOAD_BENCHMARK_SOURCES = True  # Only runs with DOWNLOAD_ASSETS and PREPARE_DATA.
 SOURCE_ROOT = None  # default: <project>/data/raw/jevbench_sources
 '''),
         markdown("## 2. Mount storage and locate the checkout\nUse PROJECT_DIR for the uploaded repository. Otherwise this cell clones it. Existing code is reused without pull/reset, so upload the revised notebook AND its scripts/src files before running. Drive stores assets, frozen manifests, checkpoints and logs; the Python environment is on the temporary Colab disk and must be recreated after a runtime reset."),
@@ -107,12 +108,14 @@ if DOWNLOAD_ASSETS:
 else:
     print("Downloads disabled; existing local snapshots will be checked.")
 '''),
-        markdown("## 6. Restore benchmark text and prepare the shared data\nSet PREPARE_DATA=True. This runs the existing adapters, cross-source overlap audit, 90/5/5 splits, training-only banks, 3,125-update augmentation trace, and fixed 512-query random/BM25-hard scaling manifests. It is a substantial CPU/RAM operation, not training. Existing complete manifests are verified and reused; partial/mismatched preparation fails rather than silently changing comparisons.\n\nFor withheld JevBench states, upload the source files to data/raw/jevbench_sources using the layout in data/raw/jevbench/sources.json, or provide an already restored_states.jsonl. Restoration verifies state hashes. Missing licensed sources or a needed fallback partition produces an explicit error in this cell; supply those assets and rerun. Review audit.json before freezing experiments."),
+        markdown("## 6. Restore benchmark text and prepare the shared data\nSet PREPARE_DATA=True. This runs the existing adapters, cross-source overlap audit, 90/5/5 splits, training-only banks, 3,125-update augmentation trace, and fixed 512-query random/BM25-hard scaling manifests. It is a substantial CPU/RAM operation, not training. Existing complete manifests are verified and reused; partial/mismatched preparation fails rather than silently changing comparisons.\n\nWith DOWNLOAD_ASSETS and DOWNLOAD_BENCHMARK_SOURCES enabled, this cell fetches only missing original source files needed for withheld JevBench states (including SST5 test.jsonl), using the exact upstream revisions in sources.json. Already present files are reused. Alternatively upload source files under data/raw/jevbench_sources or provide restored_states.jsonl. Restoration verifies state hashes; original source text remains local. Review audit.json before freezing experiments."),
         code('''if PREPARE_DATA:
     args = [runtime.python, "scripts/prepare_workspace.py", "prepare", "--seed", str(SEED),
             "--scaling-queries", str(SCALING_QUERIES)]
     if RESTORE_WITHHELD_STATES:
         args.append("--restore-states")
+        if DOWNLOAD_ASSETS and DOWNLOAD_BENCHMARK_SOURCES:
+            args.append("--download-benchmark-sources")
     if SOURCE_ROOT:
         args += ["--source-root", str(SOURCE_ROOT)]
     runtime.run(args, "prepare_data")

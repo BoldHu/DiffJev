@@ -206,10 +206,18 @@ def restore_benchmark_states(source_root=None):
     common.DATA = Path(source_root or ROOT/"data/raw/jevbench_sources")
     common.SOURCES_PATH = ROOT/"data/raw/jevbench/sources.json"
     rows=load_local_dataset("jevbench",str(ROOT/"data"))
+    from .data.benchmark_sources import missing_source_plan
+    missing=missing_source_plan(common,rows,common.DATA)
+    if missing:
+        paths="\n".join(item["target"] for item in missing)
+        raise FileNotFoundError("Missing original benchmark source files:\n"+paths+
+            "\nDownload the pinned sources with: python scripts/prepare_workspace.py benchmark-sources"
+            "\nOr add --download-benchmark-sources to prepare --restore-states."
+            "\nFor a custom source directory, also pass --source-root <directory>.")
     sources={}
     restored=[]
     for case in rows:
-        if "state" in case:
+        if case.get("state") is not None and case.get("state") != "":
             continue
         key=case["slice"]
         source=common.parent_key(key)

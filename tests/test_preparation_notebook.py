@@ -62,8 +62,11 @@ def test_setup_notebook_bootstraps_before_research_imports():
     for source in sources:
         compile(source,"notebook00","exec")
     assert all("from diffjev import workflows" not in s for s in sources)
-    assert "INSTALL_ENV = False" in sources[0] and "DOWNLOAD_ASSETS = False" in sources[0]
-    assert "PREPARE_DATA = False" in sources[0]
+    # User selections in the working notebook may be True; generator defaults
+    # must still require explicit opt-in for installation and large downloads.
+    template=(root/"scripts/setup_notebook_cells.py").read_text(encoding="utf-8")
+    assert "INSTALL_ENV = False" in template and "DOWNLOAD_ASSETS = False" in template
+    assert "PREPARE_DATA = False" in template
     text="\n".join(sources)
     assert text.index("drive.mount") < text.index("install_environment(ROOT")
     assert "--metadata-only" in text and '"--restore-states"' in text

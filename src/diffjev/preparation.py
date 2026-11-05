@@ -65,7 +65,8 @@ def validate_prepared(directory, seed=0, updates=3125):
     return {"seed":seed,"optimizer_updates":updates,"trace_sha256":audit["trace_sha256"]}
 
 
-def prepare_all(seed=0, scaling_queries=512, restore_states=False, source_root=None):
+def prepare_all(seed=0, scaling_queries=512, restore_states=False, source_root=None,
+                download_benchmark_sources=False):
     from . import workflows as w
     prepared = w.PREPARED
     if any((prepared/(name+".json")).exists() for name in PREPARED_FILES):
@@ -73,6 +74,9 @@ def prepare_all(seed=0, scaling_queries=512, restore_states=False, source_root=N
         print("Reusing verified frozen preparation:",result)
     else:
         if restore_states:
+            if download_benchmark_sources:
+                from .data.benchmark_sources import download_benchmark_sources as fetch_sources
+                print(fetch_sources(source_root))
             print(w.restore_benchmark_states(source_root))
         print("Preparing accepted source records and frozen augmentation trace...",flush=True)
         w.prepare_data(seed=seed)

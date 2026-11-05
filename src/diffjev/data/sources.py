@@ -141,9 +141,9 @@ def load_local_dataset(name: str, data_root: str, split: Optional[str] = None):
         # Some licensed source states are withheld in the public manifest.
         restored = Path(path) / "restored_states.jsonl"
         states = {r["case_id"]: r["state"] for r in
-                  (json.loads(l) for l in restored.read_text(encoding="utf-8").split("\n"))} if restored.exists() else {}
+                  (json.loads(l) for l in restored.read_text(encoding="utf-8").split("\n") if l.strip())} if restored.exists() else {}
         for row in rows:
-            if "state" not in row and row["case_id"] in states:
+            if row.get("state") in (None, "") and row["case_id"] in states:
                 row["state"] = states[row["case_id"]]
         if len(rows) != 8016 or len({r["family_id"] for r in rows}) != 5516:
             raise ValueError("Unexpected JevBench manifest: audit the pinned release before proceeding")
