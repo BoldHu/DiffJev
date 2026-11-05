@@ -1,0 +1,17 @@
+# Formal Python 3.12 environment. Install in a separate environment from local smoke tests.
+# Jeva's published runtime pins determine torch/transformers/peft compatibility.
+torch==2.9.1
+transformers==5.17.0
+peft==0.21.2
+accelerate==1.12.0
+huggingface-hub==1.5.0
+safetensors==0.8.0
+datasets==4.4.1
+pyarrow==22.0.0
+numpy==2.2.6
+PyYAML==6.0.3
+matplotlib==3.10.7
+pytest==8.4.2
+nbformat==5.10.4
+tqdm==4.67.1
+jeva-model @ git+https://github.com/LiQiiiii/Jeva.git@e2104e0720100f979f2cdd456a1cbbee96da0abd

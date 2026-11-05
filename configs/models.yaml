@@ -1,0 +1,69 @@
+anchor:
+  llada_8b_base:
+    repo_id: GSAI-ML/LLaDA-8B-Base
+    url: https://huggingface.co/GSAI-ML/LLaDA-8B-Base
+    revision: 0f2787f2d87eac5eed8a087d5ecd24277e6255b2
+    adapter: diffjev.backbones.llada.LLaDAAdapter
+    local_dir: models/GSAI-ML__LLaDA-8B-Base
+    approx_size_gb: 16.1
+    role: Method-development and complete-ablation anchor (Exp 1, 2, 3, 4, 5)
+size_panel:
+  nemotron_3b:
+    repo_id: nvidia/Nemotron-Labs-Diffusion-3B
+    url: https://huggingface.co/nvidia/Nemotron-Labs-Diffusion-3B
+    revision: 0d51902da1f8869f83413ce642fab402fa5641e0
+    adapter: diffjev.backbones.nemotron.NemotronDiffusionAdapter
+    local_dir: models/nvidia__Nemotron-Labs-Diffusion-3B
+    skip_lora: true
+    approx_size_gb: 6.4
+  nemotron_8b:
+    repo_id: nvidia/Nemotron-Labs-Diffusion-8B
+    url: https://huggingface.co/nvidia/Nemotron-Labs-Diffusion-8B
+    revision: 16c67f0560b912e93e0cabb6e0c4f5c3086d95fc
+    adapter: diffjev.backbones.nemotron.NemotronDiffusionAdapter
+    local_dir: models/nvidia__Nemotron-Labs-Diffusion-8B
+    skip_lora: true
+    approx_size_gb: 16.5
+  nemotron_14b:
+    repo_id: nvidia/Nemotron-Labs-Diffusion-14B
+    url: https://huggingface.co/nvidia/Nemotron-Labs-Diffusion-14B
+    revision: f8c3e2c078e193599b8882d965b1001c456ba738
+    adapter: diffjev.backbones.nemotron.NemotronDiffusionAdapter
+    local_dir: models/nvidia__Nemotron-Labs-Diffusion-14B
+    skip_lora: true
+    approx_size_gb: 29.0
+baselines:
+  llm_as_jev_qwen:
+    repo_id: Qwen/Qwen2.5-3B-Instruct
+    url: https://huggingface.co/Qwen/Qwen2.5-3B-Instruct
+    revision: aa8e72537993ba99e69dfaafa59ed015b17504d1
+    local_dir: models/Qwen__Qwen2.5-3B-Instruct
+    approx_size_gb: 6.2
+    role: Pinned autoregressive LLM-as-Jev baseline with bracketed suffix trie
+  bge_large_en:
+    repo_id: BAAI/bge-large-en-v1.5
+    url: https://huggingface.co/BAAI/bge-large-en-v1.5
+    revision: d4aa6901d3a41ba39fb536a557fa166f842b0e09
+    local_dir: models/BAAI__bge-large-en-v1.5
+    approx_size_gb: 1.34
+    role: Dense bi-encoder retrieval baseline for Exp 3
+  e5_large_v2:
+    repo_id: intfloat/e5-large-v2
+    url: https://huggingface.co/intfloat/e5-large-v2
+    revision: f169b11e22de13617baa190a028a32f3493550b6
+    local_dir: models/intfloat__e5-large-v2
+    approx_size_gb: 1.34
+    role: Alternative dense bi-encoder retrieval baseline for Exp 3
+  jeva_4b:
+    repo_id: LIQIIIII/Jeva-4B
+    url: https://huggingface.co/LIQIIIII/Jeva-4B
+    revision: 25ca454b3522615a243c06703ba410ecf152a128
+    local_dir: models/Jeva-4B
+    manual_upload_required: false
+    role: Single-pass set baseline Jeva-4B (place manually under models/Jeva-4B)
+mock:
+  hidden_size: 32
+  num_layers: 6
+  num_heads: 4
+  num_kv_heads: 2
+  ffn_size: 64

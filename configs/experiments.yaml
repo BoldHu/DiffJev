@@ -1,0 +1,40 @@
+# The five core experiments (AGENTS.md section 6). No additional suites.
+exp1_benchmark:
+  suite: Leanmcp/jevbench
+  evaluator: official
+  full_support: true
+  models: [llada_8b_base, nemotron_3b, nemotron_8b, nemotron_14b]
+exp2_robustness:
+  max_families: 1000
+  enumerate_all_perms_max_k: 4
+  random_perms: 10
+  perm_seed: 0
+  alias_renaming: separate_condition
+  backbone: llada_8b_base
+exp3_scaling:
+  source: ToolRet (query-only, single positive)
+  num_queries: 512
+  smoke_queries: 64
+  ks: [4, 16, 64, 256, 1024, 2048]
+  pools: [random_nested, hard_nested]
+  hard_negative_retriever: bm25   # frozen, declared
+  dense_retrieval_baseline: bge_or_e5
+exp4_ablations:                   # one factor at a time, no factorial grid
+  backbone: llada_8b_base
+  variants:
+    full: {}
+    no_cross_slot: {cross_slot_attention: false}
+    untied_positions: {position_mode: sequential}
+    no_pruning: {pruning_enabled: false}
+    no_augmentation: {train_overrides: {k_proposal: null, null_augmentation_rate: 0.0}}
+    full_context_t1_control: {num_passes: 1, use_mask_loss: false, first_pass_detail_memory: true}
+exp5_efficiency:
+  manifests: exp3 hard (BM25) pools
+  timing_queries: 100
+  ks: [4, 16, 64, 256, 1024, 2048]
+  warmups: 5
+  repetitions: 3
+  device: 1x A100 80GB, bf16, batch size 1
+  methods: [serialized_ar, serialized_dlm_one_pass, diffjev_t3_pruning]
+  sizes: [nemotron_3b, nemotron_8b, nemotron_14b]
+

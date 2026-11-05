@@ -1,0 +1,34 @@
+# DiffJev method + training defaults (AGENTS.md sections 2-5).
+# These are initial settings, not established optima.
+method:
+  num_top_layers: 4
+  position_mode: tied            # Set-RoPE; "sequential" only for the Exp 4 ablation
+  cross_slot_attention: true
+  branch_chunk_size: 64
+  num_passes: 3                  # t = 1, 2/3, 1/3
+  first_pass_detail_memory: false
+  pruning_enabled: true
+  prune_min_k: 32
+  prune_schedule: [32, 8]
+  use_mask_loss: true
+  use_task_ce: true
+  brier_weight: 0.1
+  score_cumulative_brier: false
+  iia_weight: 0.0
+  full_mask_prob: 0.5
+  t_min: 0.001
+  feedback_stop_gradient: true
+  readout_temperature: {choice: 1.0, noul: 1.0, score: 1.0}
+
+train:
+  effective_batch_size: 32
+  optimizer_updates: 3125        # 100,000 example presentations
+  learning_rate: 2.0e-5
+  grad_clip: 1.0
+  bf16: true
+  seed: 0
+  bucket_shares: {openjev_choice: 0.25, openjev_noul: 0.25, openjev_score: 0.25, toolret_choice: 0.25}
+  max_train_k: 32
+  k_proposal: {2: 0.50, 4: 0.25, 8: 0.15, 16: 0.07, 32: 0.03}
+  null_augmentation_rate: 0.15
+

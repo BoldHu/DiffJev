@@ -1,0 +1,74 @@
+{
+  "GSAI-ML/LLaDA-8B-Base": {
+    "repo_type": "model",
+    "revision": "0f2787f2d87eac5eed8a087d5ecd24277e6255b2"
+  },
+  "nvidia/Nemotron-Labs-Diffusion-3B": {
+    "repo_type": "model",
+    "revision": "0d51902da1f8869f83413ce642fab402fa5641e0"
+  },
+  "nvidia/Nemotron-Labs-Diffusion-8B": {
+    "repo_type": "model",
+    "revision": "16c67f0560b912e93e0cabb6e0c4f5c3086d95fc"
+  },
+  "nvidia/Nemotron-Labs-Diffusion-14B": {
+    "repo_type": "model",
+    "revision": "f8c3e2c078e193599b8882d965b1001c456ba738"
+  },
+  "LIQIIIII/Jeva-4B": {
+    "repo_type": "model",
+    "revision": "25ca454b3522615a243c06703ba410ecf152a128"
+  },
+  "Qwen/Qwen2.5-3B-Instruct": {
+    "repo_type": "model",
+    "revision": "aa8e72537993ba99e69dfaafa59ed015b17504d1"
+  },
+  "BAAI/bge-large-en-v1.5": {
+    "repo_type": "model",
+    "revision": "d4aa6901d3a41ba39fb536a557fa166f842b0e09"
+  },
+  "intfloat/e5-large-v2": {
+    "repo_type": "model",
+    "revision": "f169b11e22de13617baa190a028a32f3493550b6"
+  },
+  "shenjunhao/OpenJevData-140k": {
+    "repo_type": "dataset",
+    "revision": "619db5c439cf4f83cbed74eeab90479f6c39f294"
+  },
+  "mangopy/ToolRet-Training-20w": {
+    "repo_type": "dataset",
+    "revision": "fdf5a317455b1e60785de7ba587496aa6cc878e4"
+  },
+  "Leanmcp/jevbench": {
+    "repo_type": "dataset",
+    "revision": "ed50fe0381714d1c0273cbe03cece755b25d586b"
+  },
+  "allenai/ai2_arc": {
+    "repo_type": "dataset",
+    "revision": "210d026faf9955653af8916fad021475a3f00453"
+  },
+  "google/boolq": {
+    "repo_type": "dataset",
+    "revision": "35b264d03638db9f4ce671b711558bf7ff0f80d5"
+  },
+  "nvidia/HelpSteer2": {
+    "repo_type": "dataset",
+    "revision": "990b2711a36180dd19d9c94b8627844866f8982a"
+  },
+  "LiQiiiii/Jeva": {
+    "repo_type": "github",
+    "revision": "e2104e0720100f979f2cdd456a1cbbee96da0abd"
+  },
+  "Leanmcp/jevbench-code": {
+    "repo_type": "github",
+    "revision": "251421a6f7c9a801038a617b172bc0cb967df076"
+  },
+  "mangopy/ToolRet-Queries": {
+    "repo_type": "dataset",
+    "revision": "b8c76ad3349ff17497b6bdb28bb5b8f61a0f6445"
+  },
+  "mangopy/ToolRet-Tools": {
+    "repo_type": "dataset",
+    "revision": "e06c38c75612b6536bd959e08cdd345894aba6a7"
+  }
+}

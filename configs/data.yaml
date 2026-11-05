@@ -1,0 +1,71 @@
+data_root: data
+training:
+  openjev:
+    repo_id: shenjunhao/OpenJevData-140k
+    url: https://huggingface.co/datasets/shenjunhao/OpenJevData-140k
+    split: SFT
+    revision: 619db5c439cf4f83cbed74eeab90479f6c39f294
+    local_dir: data/raw/openjev
+    raw_counts_checked:
+      total: 100345
+      hard: 86023
+      soft: 14322
+  toolret:
+    repo_id: mangopy/ToolRet-Training-20w
+    url: https://huggingface.co/datasets/mangopy/ToolRet-Training-20w
+    split: train
+    revision: fdf5a317455b1e60785de7ba587496aa6cc878e4
+    local_dir: data/raw/toolret
+    use_field: query
+    raw_counts_checked:
+      total: 208826
+fallbacks:
+  choice:
+    repo_id: allenai/ai2_arc
+    url: https://huggingface.co/datasets/allenai/ai2_arc
+    configs:
+    - ARC-Easy
+    - ARC-Challenge
+    split: train
+    revision: 210d026faf9955653af8916fad021475a3f00453
+    local_dir: data/raw/fallback_choice
+  noul:
+    repo_id: google/boolq
+    url: https://huggingface.co/datasets/google/boolq
+    split: train
+    revision: 35b264d03638db9f4ce671b711558bf7ff0f80d5
+    local_dir: data/raw/fallback_noul
+  score:
+    repo_id: nvidia/HelpSteer2
+    url: https://huggingface.co/datasets/nvidia/HelpSteer2
+    split: train
+    rubric: helpfulness_0_4
+    revision: 990b2711a36180dd19d9c94b8627844866f8982a
+    local_dir: data/raw/fallback_score
+evaluation:
+  jevbench:
+    repo_id: Leanmcp/jevbench
+    url: https://huggingface.co/datasets/Leanmcp/jevbench
+    revision: ed50fe0381714d1c0273cbe03cece755b25d586b
+    local_dir: data/raw/jevbench
+    documented:
+      datasets: 12
+      cases: 8016
+      canonical_families: 5516
+  toolret_queries:
+    repo_id: mangopy/ToolRet-Queries
+    split: queries
+    local_dir: data/raw/toolret_queries
+    url: https://huggingface.co/datasets/mangopy/ToolRet-Queries
+    revision: b8c76ad3349ff17497b6bdb28bb5b8f61a0f6445
+  toolret_tools:
+    repo_id: mangopy/ToolRet-Tools
+    split: tools
+    local_dir: data/raw/toolret_tools
+    url: https://huggingface.co/datasets/mangopy/ToolRet-Tools
+    revision: e06c38c75612b6536bd959e08cdd345894aba6a7
+splits:
+  train: 0.9
+  dev: 0.05
+  calib: 0.05
+  salt: diffjev-v1

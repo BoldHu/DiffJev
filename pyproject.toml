@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "diffjev"
+version = "0.1.0"
+description = "DiffJev: permutation-equivariant multi-slot co-denoising for decision models"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = ["torch>=2.0", "numpy", "pyyaml", "matplotlib"]
+
+[project.optional-dependencies]
+test = ["pytest>=7"]
+hf = ["transformers==5.17.0", "datasets==4.4.1", "huggingface_hub==1.5.0", "accelerate==1.12.0", "safetensors==0.8.0"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src", "."]
+testpaths = ["tests"]
+addopts = "-ra"
+

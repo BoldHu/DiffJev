@@ -1,0 +1,15 @@
+# Shared notebook configuration; no synthetic/formal auto-selection.
+seed: 0
+planned_anchor_seeds: [0, 1, 2]
+size_panel_seeds: [0]
+device: cuda
+backbones: [llada_8b_base, nemotron_3b, nemotron_8b, nemotron_14b]
+anchor_ablations: [full_context_t1_control, no_cross_slot, untied_positions, no_augmentation]
+references: [jeva, llm_as_jev]
+enable_paid_api: false
+scaling_ks: [4, 16, 64, 256, 1024, 2048]
+scaling_queries: 512
+timing_queries: 100
+timing_repetitions: 3
+timing_warmups: 5
+truncation_policy: preserve_pinned_semantic_content_and_report_context_failures

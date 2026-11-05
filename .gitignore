@@ -1,0 +1,104 @@
+# =====================================================================
+# DiffJev .gitignore
+# Never commit: model weights, datasets, checkpoints, caches, logs,
+# secrets/API keys. Track: source, notebooks, configs, manifests,
+# compact results (see README.md "What is tracked").
+# =====================================================================
+
+# ---------------- Secrets / API keys ----------------
+JEV_API_KEY.txt
+*API_KEY*
+*api_key*
+*.key
+*.pem
+*.token
+.env
+.env.*
+!.env.example
+secrets/
+credentials*.json
+.huggingface/
+hf_token*
+.netrc
+
+# ---------------- Model weights / checkpoints ----------------
+*.safetensors
+*.safetensors.index.json
+*.bin
+*.pt
+*.pth
+*.ckpt
+*.gguf
+*.ggml
+*.onnx
+*.h5
+*.msgpack
+*.npz
+*.npy
+*.pkl
+*.pickle
+models/
+weights/
+checkpoints/
+ckpt/
+outputs/
+runs/
+hf_cache/
+.cache/
+huggingface/
+
+# ---------------- Datasets ----------------
+data/raw/
+data/processed/
+data/cache/
+data/external/
+*.parquet
+*.arrow
+*.jsonl
+*.jsonl.gz
+*.tar
+*.tar.gz
+*.zip
+*.7z
+# Frozen manifests ARE tracked (small JSON/CSV id lists). Large derived
+# tables must stay out of git.
+!data/manifests/
+!data/manifests/**
+
+# ---------------- Logs / experiment tracking ----------------
+logs/
+*.log
+wandb/
+mlruns/
+tensorboard/
+lightning_logs/
+profiles/
+*.prof
+*.trace.json
+nohup.out
+
+# ---------------- Python ----------------
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.ipynb_checkpoints/
+.venv/
+venv/
+env/
+
+# ---------------- OS / editors ----------------
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+*.swp
+
