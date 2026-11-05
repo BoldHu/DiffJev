@@ -29,6 +29,7 @@ from .training import (train_diffjev, save_trainable_checkpoint, load_trainable_
                        apply_freeze_policy, parameter_counts)
 from .calibration import calibrate_model
 from .evaluation.exp4_ablation import build_ablation_config
+from .progress import progress
 
 PREPARED = ROOT / "data/processed/formal"
 CORE_ABLATIONS = ("full", "full_context_t1_control", "no_cross_slot", "untied_positions", "no_pruning", "no_augmentation")
@@ -61,7 +62,7 @@ def read_json(path):
 
 def _mapped(rows, mapper, source, rejects):
     result = []
-    for index, row in enumerate(rows):
+    for index, row in enumerate(progress(rows, f"Parse {source}")):
         try:
             mapped = list(mapper(row))
             if not mapped:
@@ -97,11 +98,13 @@ def prepare_data(seed=0, num_updates=3125):
                         "groups":row["duplicate_option_groups"]}
                        for row in benchmark if row.get("duplicate_option_groups")]
     print(f"JevBench parsed: {len(benchmark)} cases; {len(duplicate_cases)} cases have duplicate option text (all retained).",flush=True)
+    print("[prepare] Reading and adapting held-out ToolRet queries/tools...",flush=True)
     query_rows = read_parquet_snapshot("toolret_queries", "queries", with_config=True)
     tool_rows = read_parquet_snapshot("toolret_tools", "tools", with_config=True)
     queries, corpus, eval_audit = adapt_toolret_evaluation(query_rows, tool_rows)
     evaluation = benchmark + [{"query":q["query"],"family_id":"toolret:"+q["qid"]} for q in queries]
     rejects = []
+    print("[prepare] Reading training snapshots...",flush=True)
     records = _mapped(read_parquet_snapshot("openjev","SFT"), map_openjev_record, "openjev", rejects)
     records += _mapped(read_parquet_snapshot("toolret","train"), map_toolret_record, "toolret", rejects)
     records = list({r["rid"]:r for r in records}.values())
@@ -125,13 +128,14 @@ def prepare_data(seed=0, num_updates=3125):
     from .data.context_audit import TrainingContextAudit
     context_audit=TrainingContextAudit()
     accepted=[]
-    for rec in records:
+    for rec in progress(records, "Shared context audit / source records"):
         reason=context_audit.check(rec)
         if reason:
             rejects.append({"source":rec["source"],"rid":rec["rid"],"reason":"shared_context:"+reason})
         else:
             accepted.append(rec)
     records=accepted
+    print(f"[prepare] Shared context audit accepted {len(records)} source records; starting overlap audit...",flush=True)
     overlap_audit = audit_groups(records,evaluation)
     eval_keys = {key for r in evaluation for key in record_dedup_keys(r)}
     initial = split_records(records,record_dedup_keys,eval_keys=eval_keys)
@@ -145,7 +149,7 @@ def prepare_data(seed=0, num_updates=3125):
             spec = cfg["fallbacks"][short]
             provenance["fallback_"+short] = verify_snapshot(ROOT/spec["local_dir"],spec["repo_id"])
             fallback = _mapped(read_parquet_snapshot("fallback_"+short,"train"),mapper,"fallback_"+short,rejects)
-            for rec in fallback:
+            for rec in progress(fallback, f"Shared context audit / fallback {short}"):
                 reason=context_audit.check(rec)
                 if reason:
                     rejects.append({"source":rec["source"],"rid":rec["rid"],"reason":"shared_context:"+reason})
@@ -154,6 +158,7 @@ def prepare_data(seed=0, num_updates=3125):
             fallback_used.append(short)
     if fallback_used:
         overlap_audit = audit_groups(records,evaluation)
+    print("[prepare] Building splits, training-only banks, and frozen augmentation trace...",flush=True)
     manifest,trace,banks = prepare_training_manifest(records,evaluation,num_updates=num_updates,seed=seed)
     # Validate the actual augmented menus before freezing comparisons. Replace
     # rejected presentations within their bucket; every method replays the result.
@@ -162,7 +167,7 @@ def prepare_data(seed=0, num_updates=3125):
              for bucket in manifest.bucket_counts["train"]}
     rng=random.Random(seed+20000)
     context_replacements=[]
-    for batch in trace:
+    for batch in progress(trace, "Shared context audit / augmented batches (32 presentations each)"):
         for item in batch:
             for attempt in range(100):
                 rec=dict(by_id[item["rid"]])
@@ -188,6 +193,7 @@ def prepare_data(seed=0, num_updates=3125):
     PREPARED.mkdir(parents=True,exist_ok=True)
     for name,obj in (("records",records),("benchmark",benchmark),("toolret_queries",queries),
                      ("toolret_corpus",corpus),("trace",trace),("banks",banks),("manifest",manifest)):
+        print(f"[prepare] Saving {name}.json...",flush=True)
         save_json(PREPARED/(name+".json"),obj)
     audit = {"sources":provenance,"seed":seed,"overlap":overlap_audit,"rejections":rejects,
              "benchmark_duplicate_options":duplicate_cases,
@@ -196,6 +202,7 @@ def prepare_data(seed=0, num_updates=3125):
              "bank_sha256":digest(banks),"manifest_sha256":digest(clean_json(manifest)),
              "negative_policy":"OpenJev extensions require audited eligible IDs; ToolRet excludes every known positive and duplicates",
              "null_policy":"15% only for explicitly certified records", "environment":environment_record()}
+    print("[prepare] Saving audit.json...",flush=True)
     save_json(PREPARED/"audit.json",audit)
     return {"accepted":len(records),"rejected":len(rejects),"manifest":asdict(manifest)}
 
@@ -394,7 +401,7 @@ def build_scaling_manifest(seed=0,num_queries=512):
     candidates={c["cid"]:Candidate(c["cid"],[],text=c["text"]) for c in corpus}
     specs=[]
     # Match the official category-specific retrieval corpus for every query.
-    for domain in sorted({q["domain"] for q in queries}):
+    for domain in progress(sorted({q["domain"] for q in queries}), "Scaling manifest / domains"):
         rows=[dict(q,query_ids=[],query_text=q["query"],positive=candidates[q["positive_id"]])
               for q in queries if q["domain"]==domain]
         pool=[candidates[c["cid"]] for c in corpus if domain in c.get("domains",[c["domain"]])]

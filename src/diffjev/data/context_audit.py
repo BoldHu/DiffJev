@@ -15,11 +15,13 @@ class TrainingContextAudit:
             if name != "llada_8b_base" and not name.startswith("nemotron"):
                 continue
             path=ROOT/spec["local_dir"]
+            print(f"[prepare] Loading context-audit tokenizer: {name} (local files only)",flush=True)
             verify_snapshot(path,spec["repo_id"])
             config=json.loads((path/"config.json").read_text(encoding="utf-8"))
             limit=int(config.get("max_position_embeddings",config.get("max_sequence_length",4096)))
             tokenizer=AutoTokenizer.from_pretrained(str(path),local_files_only=True,trust_remote_code=True)
             self.entries.append((name,tokenizer,limit))
+            print(f"[prepare] Context-audit tokenizer ready: {name}; context limit={limit}",flush=True)
 
     def check(self,record):
         for name,tokenizer,limit in self.entries:

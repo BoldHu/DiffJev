@@ -115,7 +115,8 @@ def build_nested_scaling_manifests(
         stratum=lambda q: q.get("domain", "toolret"), identity=lambda q: q["qid"])
     specs: List[ScalingQuerySpec] = []
 
-    for q in selected_queries:
+    from ..progress import progress
+    for q in progress(selected_queries, "Build nested random/BM25-hard pools / queries"):
         qid = str(q["qid"])
         q_ids = [int(t) for t in q["query_ids"]]
         pos: Candidate = q["positive"]

@@ -965,7 +965,8 @@ def prepare_training_manifest(
             return [0]  # never used as model input
     rng = random.Random(seed + 10000)
     k_hist = Counter()
-    for batch in trace:
+    from ..progress import progress
+    for batch in progress(trace, "Freeze augmented menus / batches"):
         for item in batch:
             rec = rec_by_id[item["rid"]]
             ex, aug = materialize_example(TextOnly(), rec,

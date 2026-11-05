@@ -2,6 +2,7 @@
 from collections import defaultdict
 import hashlib
 from .splits import normalize_text, UnionFind
+from ..progress import progress
 
 
 def audit_groups(records, evaluation, threshold=.90, bucket_limit=200):
@@ -14,7 +15,7 @@ def audit_groups(records, evaluation, threshold=.90, bucket_limit=200):
     uf, buckets, exact = UnionFind(), defaultdict(list), {}
     signatures, strings = {}, {}
     uncertain = set()
-    for i, row in enumerate(rows):
+    for i, row in enumerate(progress(rows, "Overlap audit / source and evaluation records")):
         key = str(i)
         uf.find(key)
         text = normalize_text(row.get("state") or row["query"])
