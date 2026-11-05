@@ -1,6 +1,7 @@
 """Generate the eight formal notebooks; never execute experiments."""
 from pathlib import Path
 import json
+from setup_notebook_cells import setup_cells
 
 ROOT=Path(__file__).resolve().parents[1]
 def markdown(text):
@@ -12,26 +13,34 @@ from pathlib import Path
 ROOT = Path(os.environ.get('DIFFJEV_ROOT', Path.cwd())).resolve()
 if ROOT.name == 'notebooks':
     ROOT = ROOT.parent
-assert (ROOT / 'AGENTS.md').exists(), 'Set DIFFJEV_ROOT to the checked-out repository'
+if not (ROOT / 'AGENTS.md').exists() and Path('/content/drive/MyDrive/DiffJev/AGENTS.md').exists():
+    ROOT = Path('/content/drive/MyDrive/DiffJev')
+assert (ROOT / 'AGENTS.md').exists(), 'Mount Drive and set DIFFJEV_ROOT to the checkout used by notebook 00'
 sys.path.insert(0, str(ROOT / 'src'))
+from diffjev.notebook_runtime import NotebookRuntime
+runtime = NotebookRuntime(ROOT)
+runtime.python_code("from diffjev.preparation import check_environment; from pathlib import Path; check_environment(Path.cwd())", label='__NOTEBOOK_NAME___environment')
+def run_python(source):
+    prefix = '''import gc
+from pathlib import Path
 from diffjev import workflows as w
 from diffjev.config import load_yaml_config
+ROOT = w.ROOT
 cfg = load_yaml_config(str(ROOT / 'configs/workflow.yaml'))
 SEED, DEVICE = cfg['seed'], cfg['device']
+'''
+    runtime.python_code(prefix + source, label='__NOTEBOOK_NAME__')
+print('Experiment worker:', runtime.python)
 """
 
 def build():
     notebooks = [
-    ('00_setup', 'Environment and pinned assets', [
-      markdown('Use Python 3.12 for the formal environment. Installation and downloads below are explicit opt-in operations. Upload complete pinned snapshots to the paths in configs/models.yaml and configs/data.yaml; include download_provenance.json. No model weights are fetched by importing DiffJev.'),
-      code("INSTALL = False\nif INSTALL:\n    import subprocess\n    subprocess.check_call([sys.executable, '-m', 'pip', 'install', '-r', str(ROOT/'requirements-lock.txt')])"),
-      code("from diffjev.assets import environment_record, model_specs\nw.save_json(ROOT/'outputs/formal/environment.json', environment_record())\nprint(environment_record())\nfor name,spec in model_specs().items():\n    print(name, spec['revision'], ROOT/spec['local_dir'])"),
-      code("# Optional large downloads; edit only on the intended experiment machine.\nDOWNLOAD = False\nif DOWNLOAD:\n    import subprocess\n    subprocess.check_call([sys.executable, str(ROOT/'scripts/download_assets.py'), '--all-core', '--yes'])"),
-      markdown('Before Exp 5, expose exactly one A100 80GB with CUDA_VISIBLE_DEVICES. Larger training runs may be scheduled independently on the three GPUs. This code does not silently shard model layers across devices.')]),
+    ('00_setup', 'Complete Colab preparation', setup_cells(markdown,code)),
     ('01_prepare_data','Real data preparation, audits, and frozen menus',[
       markdown('Requires the pinned OpenJev SFT, ToolRet training, original JevBench text cases, ToolRet Queries/Tools snapshots, and the four backbone tokenizer/config snapshots for shared context acceptance (no weights are loaded during preparation). Restore withheld JevBench states from their licensed source with w.restore_benchmark_states(); hashes are checked. Records with ambiguous labels are quarantined. Review data/processed/formal/audit.json before freezing comparisons.'),
-      code("summary = w.prepare_data(seed=SEED)\nprint(summary['accepted'], summary['rejected'])"),
-      code("print(w.build_scaling_manifest(seed=SEED, num_queries=cfg['scaling_queries']))")]),
+      markdown('Notebook 00 already includes preparation. This notebook optionally verifies/reuses the same frozen artifacts; it does not overwrite them.'),
+      code("from diffjev.preparation import prepare_all\nprepare_all(seed=SEED, scaling_queries=cfg['scaling_queries'])"),
+      code("audit = w.read_json(w.PREPARED/'audit.json')\nprint('Sources:', audit['sources'])\nprint('Rejected records:',len(audit['rejections']))\nprint('Trace:',audit['trace_sha256'])")]),
     ('02_train_diffjev','Independent pretrained DiffJev adaptations',[
       markdown('These cells perform real supervised training. The saved source/augmentation trace, 3,125 updates, final-four-layer-plus-normalization policy, development checkpoint rule, and separate calibration split are shared. Set RUNS to the machines/runs allocated to this session. Three anchor seeds are planned; the size panel initially uses seed 0.'),
       code("RUNS = cfg['backbones']\nfor backbone in RUNS:\n    summary = w.train_run(backbone, seed=SEED, device=DEVICE)\n    print(backbone, summary)\n    gc.collect()"),
@@ -59,8 +68,12 @@ def build():
       code("w.collect_results()"),
       markdown('Results include accuracy, survival, p50/p95, query-bootstrap uncertainty, resident-weight peak memory, matched-successful-query speedups, failures, and latency/GFLOP plots. CPU fixtures and theoretical attention ratios are never presented as measured A100 speedups.')])]
     for name,title,cells in notebooks:
+        if name != '00_setup':
+            cells = [code('run_python(r\"\"\"\n'+''.join(cell['source'])+'\n\"\"\")')
+                     if cell['cell_type']=='code' else cell for cell in cells]
+            cells = [code(BOOT.replace('__NOTEBOOK_NAME__',name))]+cells
         nb={'nbformat':4,'nbformat_minor':5,'metadata':{'kernelspec':{'name':'python3','display_name':'Python 3','language':'python'}},
-            'cells':[markdown('# '+title+'\n\nFormal DiffJev workflow; see AGENTS.md and prompt.md.'),code(BOOT)]+cells}
+            'cells':[markdown('# '+title+'\n\nFormal DiffJev workflow; see AGENTS.md and prompt.md.')]+cells}
         for i,cell in enumerate(nb['cells']):cell['id']=f'{name}-{i}'
         (ROOT/'notebooks'/f'{name}.ipynb').write_text(json.dumps(nb,indent=2,ensure_ascii=False)+'\n',encoding='utf-8')
     print('Generated eight formal notebooks (not executed).')

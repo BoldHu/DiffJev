@@ -91,6 +91,7 @@ dist/
 htmlcov/
 .ipynb_checkpoints/
 .venv/
+.venv-formal/
 venv/
 env/
 

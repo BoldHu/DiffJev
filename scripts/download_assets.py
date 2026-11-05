@@ -55,7 +55,8 @@ def _write_provenance(target_dir: str, info: Dict[str, Any]) -> None:
         json.dump(info, f, indent=2)
 
 
-def download_model(name: str, spec: Dict[str, Any], models_root: str, rev_override: str = None) -> str:
+def download_model(name: str, spec: Dict[str, Any], models_root: str, rev_override: str = None,
+                   metadata_only: bool = False) -> str:
     if spec.get("manual_upload_required") or not spec.get("repo_id"):
         raise RuntimeError(
             f"Model {name!r} requires manual upload to {spec.get('local_dir')} (see README.md)."
@@ -72,11 +73,14 @@ def download_model(name: str, spec: Dict[str, Any], models_root: str, rev_overri
     api = HfApi()
     repo_info = api.model_info(spec["repo_id"], revision=rev)
     resolved_sha = getattr(repo_info, "sha", rev)
+    # Fetch tokenizer, configuration and remote implementation without weights.
+    patterns = ["*.json", "*.py", "*.model", "*.tiktoken", "*.jinja", "merges.txt", "vocab.txt"] if metadata_only else None
     snapshot_download(
         repo_id=spec["repo_id"],
         revision=resolved_sha,
         local_dir=target,
         ignore_patterns=ignore,
+        allow_patterns=patterns,
     )
     _write_provenance(
         target,
@@ -86,6 +90,7 @@ def download_model(name: str, spec: Dict[str, Any], models_root: str, rev_overri
             "requested_revision": rev,
             "resolved_sha": resolved_sha,
             "skip_lora": bool(spec.get("skip_lora", False)),
+            "last_download_scope": "metadata_only" if metadata_only else "full_snapshot",
             "downloaded_at_utc": datetime.datetime.utcnow().isoformat() + "Z",
         },
     )
@@ -136,6 +141,7 @@ def main() -> None:
     ap.add_argument("--model", action="append", choices=sorted(models), help="Model key(s) to download")
     ap.add_argument("--dataset", action="append", choices=sorted(datasets), help="Dataset key(s) to download")
     ap.add_argument("--all-core", action="store_true", help="Download anchor + size panel + core datasets")
+    ap.add_argument("--metadata-only", action="store_true", help="Download model tokenizer/config/code only; excludes weights")
     ap.add_argument("--revision", default=None, help="Optional explicit commit SHA override")
     ap.add_argument("--yes", action="store_true", help="Confirm downloading large files")
     args = ap.parse_args()
@@ -157,6 +163,8 @@ def main() -> None:
 
     if not args.yes:
         sys.exit("Refusing to start large downloads without --yes.")
+    if args.metadata_only and (args.dataset or args.all_core):
+        sys.exit("--metadata-only requires explicit --model entries and cannot download datasets")
 
     m_keys = list(args.model or [])
     d_keys = list(args.dataset or [])
@@ -165,7 +173,7 @@ def main() -> None:
         d_keys = ["openjev", "toolret", "jevbench", "toolret_queries", "toolret_tools"]
 
     for mk in m_keys:
-        out = download_model(mk, models[mk], str(paths["models"]), rev_override=args.revision)
+        out = download_model(mk, models[mk], str(paths["models"]), rev_override=args.revision, metadata_only=args.metadata_only)
         print(f"[model:{mk}] saved to {out}")
     for dk in d_keys:
         out = download_dataset(dk, datasets[dk], str(paths["raw"]), rev_override=args.revision)

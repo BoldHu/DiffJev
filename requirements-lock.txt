@@ -1,6 +1,8 @@
 # Formal Python 3.12 environment. Install in a separate environment from local smoke tests.
 # Jeva's published runtime pins determine torch/transformers/peft compatibility.
 torch==2.9.1
+torchvision==0.24.1
+torchaudio==2.9.1
 transformers==5.17.0
 peft==0.21.2
 accelerate==1.12.0

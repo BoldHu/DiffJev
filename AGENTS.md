@@ -266,8 +266,8 @@ Required notebook sequence:
 
 | Notebook | Purpose |
 |---|---|
-| `00_setup.ipynb` | Environment checks, pinned dependencies, optional downloads |
-| `01_prepare_data.ipynb` | Provenance, adapters, deduplication, splits, candidate manifests |
+| `00_setup.ipynb` | Colab storage/checkout, isolated Python 3.12, optional pinned downloads, shared data preparation and readiness |
+| `01_prepare_data.ipynb` | Optional preparation rerun/audit: provenance, adapters, deduplication, splits, candidate manifests |
 | `02_train_diffjev.ipynb` | Training, validation, checkpoint/resume |
 | `03_run_baselines.ipynb` | Baseline setup and standardized adapters |
 | `04_exp1_exp2.ipynb` | Benchmark and robustness evaluation |
@@ -276,6 +276,8 @@ Required notebook sequence:
 | `07_exp5_efficiency.ipynb` | Matched-size timing, total FLOPs, memory, and complexity comparison |
 
 Notebooks must run top-to-bottom after checkout and import reusable code from `src/`; avoid copying the implementation into each notebook. Keep model/attention, diffusion, task adapters, data, evaluation, and baseline code modular. `tests/` contains meaningful invariant tests; `README.md` specifies execution order and manual upload paths for weights, data, and baseline assets.
+
+Notebook 00 is the single preparation entry point; 01 remains an optional audit/reuse interface. On hosted Colab, the frontend kernel handles Drive while research commands in 00–07 run in the saved Python 3.12 worker environment. Recreate this temporary environment after runtime resets. Download only selected full models, but obtain all four backbone tokenizers/configs for shared context acceptance. Do not silently replace frozen preparation on reruns. These are execution changes, not changes to the five experiments or method.
 
 The intended Git remote is `https://github.com/BoldHu/DiffJev.git`. Track source, notebooks, configuration, manifests, and compact results. Exclude raw datasets, checkpoints, caches, and secrets. Use `JEV_API_KEY` from the environment or an existing `JEV_API_KEY.txt` without displaying, committing, or embedding its contents in outputs.
 
