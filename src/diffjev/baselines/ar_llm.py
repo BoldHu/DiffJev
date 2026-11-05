@@ -17,7 +17,9 @@ Implements AGENTS.md sections 2.0, 6 (Exp 5), and 7:
 from __future__ import annotations
 
 import time
+from collections.abc import Mapping
 from dataclasses import dataclass
+from numbers import Integral
 from typing import Dict, List, Optional, Sequence, Tuple
 
 import torch
@@ -37,6 +39,23 @@ class CausalSerializedPrompt:
     candidate_ids: List[str]
     label_token_seqs: List[List[int]]  # [K] token sequences for each candidate label
     ref_token_seq: List[int]  # token sequence for reference/No/lowest bin
+
+
+def _chat_input_ids(encoded) -> List[int]:
+    """Extract one unpadded prompt, including Transformers 5 BatchEncoding.
+
+    Never iterate/index a BatchEncoding as a token sequence: integer indexing
+    accesses its low-level Encoding objects rather than its input_ids.
+    """
+    ids = encoded["input_ids"] if isinstance(encoded, Mapping) else encoded
+    if isinstance(ids, torch.Tensor):
+        ids = ids.tolist()
+    if isinstance(ids, (list, tuple)) and len(ids) == 1 and isinstance(ids[0], (list, tuple)):
+        ids = ids[0]
+    if (not isinstance(ids, (list, tuple)) or not ids
+            or any(not isinstance(t, Integral) or isinstance(t, bool) or t < 0 for t in ids)):
+        raise ValueError("AR chat template must return one nonempty sequence of integer input_ids")
+    return [int(t) for t in ids]
 
 
 def _default_label_tokens(tokenizer, idx: int, alias: Optional[str]) -> List[int]:
@@ -76,8 +95,10 @@ def pack_causal_prompt(
         text = (example.meta["query_text"] + "\nAlternatives:\n" + "\n".join(options)
                 + "\nReturn exactly one alternative label, without explanation.")
         if getattr(tokenizer, "chat_template", None):
-            ids = tokenizer.apply_chat_template([{"role": "user", "content": text}],
-                    tokenize=True, add_generation_prompt=True, enable_thinking=False)
+            encoded = tokenizer.apply_chat_template([{"role": "user", "content": text}],
+                    tokenize=True, return_dict=True, padding=False, truncation=False,
+                    add_generation_prompt=True, enable_thinking=False)
+            ids = _chat_input_ids(encoded)
         else:
             ids = _enc(tokenizer, text + "\nAnswer: ")
         eos = getattr(tokenizer, "eos_token_id", None)
@@ -87,7 +108,7 @@ def pack_causal_prompt(
         ref = label_tokens(ref_label)
         if len({tuple(s) for s in seqs + [ref]}) != len(seqs) + 1:
             raise ValueError("Tokenizer collapses distinct answer labels")
-        return CausalSerializedPrompt(torch.tensor([ids], device=device),
+        return CausalSerializedPrompt(torch.tensor([ids], dtype=torch.long, device=device),
             torch.arange(len(ids), device=device)[None], [c.cid for c in example.candidates], seqs, ref)
     ids: List[int] = list(example.query_ids)
     cids: List[str] = []
