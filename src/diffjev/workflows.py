@@ -93,6 +93,10 @@ def prepare_data(seed=0, num_updates=3125):
     raw_bench = load_local_dataset("jevbench", str(ROOT/"data"))
     # Missing withheld states are a hard error: do not silently shrink the test suite.
     benchmark = [map_jevbench_record(row) for row in raw_bench]
+    duplicate_cases = [{"case_id":row["case_id"],"family_id":row["family_id"],"dataset":row["dataset"],
+                        "groups":row["duplicate_option_groups"]}
+                       for row in benchmark if row.get("duplicate_option_groups")]
+    print(f"JevBench parsed: {len(benchmark)} cases; {len(duplicate_cases)} cases have duplicate option text (all retained).",flush=True)
     query_rows = read_parquet_snapshot("toolret_queries", "queries", with_config=True)
     tool_rows = read_parquet_snapshot("toolret_tools", "tools", with_config=True)
     queries, corpus, eval_audit = adapt_toolret_evaluation(query_rows, tool_rows)
@@ -186,6 +190,7 @@ def prepare_data(seed=0, num_updates=3125):
                      ("toolret_corpus",corpus),("trace",trace),("banks",banks),("manifest",manifest)):
         save_json(PREPARED/(name+".json"),obj)
     audit = {"sources":provenance,"seed":seed,"overlap":overlap_audit,"rejections":rejects,
+             "benchmark_duplicate_options":duplicate_cases,
              "toolret_evaluation":eval_audit,"trace_sha256":digest(trace),
              "shared_context_replacements":context_replacements,
              "bank_sha256":digest(banks),"manifest_sha256":digest(clean_json(manifest)),
@@ -242,7 +247,7 @@ def _example(tokenizer, record):
         rec["target"] = {rec["gold_id"]:1.0}
     ex,_ = materialize_example(tokenizer, rec, enable_augmentation=False)
     ex.meta.update({k:v for k,v in rec.items() if k in
-                   ("state","native_state","question","native_case","native_alias_by_id","case_id","family_id","dataset")})
+                   ("state","native_state","question","native_case","native_alias_by_id","case_id","family_id","dataset","duplicate_option_groups")})
     return ex
 
 

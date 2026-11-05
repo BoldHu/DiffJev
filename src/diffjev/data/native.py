@@ -7,6 +7,7 @@ import hashlib
 import json
 import math
 import unicodedata
+from collections import Counter
 
 from ..tasks import REFERENCE_ID
 from .splits import normalize_text
@@ -31,6 +32,36 @@ def distribution(values, n):
     if len(p) != n or any(not math.isfinite(x) or x < 0 for x in p) or abs(sum(p)-1) > 1e-5:
         raise ValueError("invalid native target distribution")
     return p
+
+
+def benchmark_candidate_ids(record, aliases, texts):
+    """Keep native alternatives distinct, including duplicate text occurrences.
+
+    For duplicates, option_order supplies the immutable source option identity.
+    This metadata is independent of display order, aliases, and gold labels; it
+    is never inserted into query/option text or exposed to the backbone.
+    """
+    semantic = [semantic_id(text) for text in texts]
+    counts = Counter(semantic)
+    if max(counts.values(),default=0) < 2:
+        return semantic, []
+    order = record.get("option_order")
+    if (not isinstance(order,list) or len(order)!=len(texts)
+            or any(type(i) is not int for i in order)
+            or sorted(order)!=list(range(len(texts)))):
+        raise ValueError(f"{record['case_id']}: duplicate option texts require a valid canonical option_order")
+    ids = [cid if counts[cid]==1 else cid+":source:"+digest(
+        [record["slice"],record["family_id"],order[i]]) for i,cid in enumerate(semantic)]
+    groups=[]
+    for cid,count in counts.items():
+        if count < 2:
+            continue
+        members=[i for i,key in enumerate(semantic) if key==cid]
+        groups.append({"semantic_id":cid,
+            "match":"identical_text" if len({texts[i] for i in members})==1 else "normalized_text_collision",
+            "candidate_ids":[ids[i] for i in members],"native_aliases":[aliases[i] for i in members],
+            "source_option_indices":[order[i] for i in members]})
+    return ids,groups
 
 
 def openjev(record, max_train_k=32):
@@ -113,12 +144,11 @@ def jevbench(record):
             raise ValueError("invalid JevBench choice criteria/gold")
         aliases = list(criteria)
         texts = [str(criteria[a]) for a in aliases]
-        cids = [semantic_id(t) for t in texts]
-        if len(cids) != len(set(cids)):
-            raise ValueError("ambiguous duplicate JevBench alternatives")
+        cids,duplicate_groups = benchmark_candidate_ids(record, aliases, texts)
         base.update(options=list(zip(cids, texts)), aliases=aliases,
                     gold_id=cids[aliases.index(gold)], forced_choice=True,
-                    native_alias_by_id=dict(zip(cids, aliases)))
+                    native_alias_by_id=dict(zip(cids, aliases)),
+                    duplicate_option_groups=duplicate_groups)
     elif mode == "noul":
         if not isinstance(gold, bool):
             raise ValueError("expected native Boolean noul gold")

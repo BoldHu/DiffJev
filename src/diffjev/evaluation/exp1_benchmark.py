@@ -147,6 +147,7 @@ def _summarize_group(
         "num_cases": len(records),
         "num_families": len({r["family_id"] for r in records}),
         "failures": sum(1 for r in records if r.get("failed")),
+        "cases_with_duplicate_option_text": sum(bool(cases_by_id[r["case_id"]].example.meta.get("duplicate_option_groups")) for r in records),
         "accuracy": hit_at_1(preds, golds),
         "chance_corrected_accuracy": chance_corrected_accuracy(preds, golds, ks),
         "family_bootstrap_accuracy": family_bootstrap_ci(fam_mean_hit, n_boot=n_boot),
@@ -192,6 +193,8 @@ def run_exp1_benchmark(
             rec = {"case_id":c.case_id,"family_id":c.family_id,"dataset":c.dataset,
                    "mode":c.example.mode,"failed":True,"failure_reason":str(error).split(":")[0],
                    "top1":None,"probs":None,"K":len(c.example.candidates)}
+        if c.example.meta.get("duplicate_option_groups"):
+            rec["duplicate_option_groups"] = c.example.meta["duplicate_option_groups"]
         raw.append(rec)
         by_ds_records[c.dataset].append(rec)
 

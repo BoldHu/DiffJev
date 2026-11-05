@@ -181,6 +181,7 @@ def run_exp2_robustness(
         per_family_records.append(
             {
                 "family_id": fid,
+                "duplicate_option_groups": ex.meta.get("duplicate_option_groups", []),
                 "K": K,
                 "num_permutations": len(perms),
                 "order_decisions": decs,
