@@ -98,4 +98,31 @@ python scripts/smoke_train.py
 
 The smoke script and synthetic fixtures are local verification only. They never establish accuracy, calibration or speed claims. Formal notebook execution, real-weight parity across all sizes, full data audits, GPU memory feasibility and paid API responses require the actual assets/environment and were not run while implementing these fixes.
 
+### LLaDA loading with the pinned Transformers 5 environment
+
+The pinned upstream LLaDA wrapper predates Transformers 5: its constructor omits
+`post_init()` and its `tie_weights()` accepts no loading keywords. This can fail
+after the weight progress bar finishes with `all_tied_weights_keys` missing.
+`LLaDAAdapter.from_local` uses a local subclass to complete initialization before
+loading and accept the new tying signature. It preserves the Base checkpoint's
+independent embedding/output weights, native forward computation and parameter
+names; it rejects incomplete checkpoint loads. It does not edit downloaded source,
+patch global Transformers classes or change the dependency lock.
+
+After syncing `src/diffjev/backbones/llada.py` to the Colab checkout, rerun the
+failed notebook 02 worker cell. Existing prepared data and model files can be
+reused; no environment reinstall or notebook 00 preparation rerun is needed for
+this error. All workflows using the LLaDA adapter share this correction.
+For a small CPU-only native loader regression in the formal environment, run:
+
+```python
+runtime.run([runtime.python, "-m", "pytest", "-q", "tests/test_llada_loading.py"],
+            "verify_llada_loader")
+```
+
+The native test uses only local pinned config/code, shrinks the model before
+instantiation and round-trips random tiny weights; it never loads the 8B tensors
+or downloads assets. Without Transformers or local source it reports a skip.
+Real pretrained-weight adapter parity remains a separate check at model loading.
+
 The intended remote is `https://github.com/BoldHu/DiffJev.git`. Raw data, model files, checkpoints, caches, secrets and large result files are ignored. Preserve compact configuration/ID manifests and approved result summaries separately; do not push without explicit authorization.
