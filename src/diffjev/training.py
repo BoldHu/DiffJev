@@ -312,6 +312,12 @@ def train_diffjev(
             "best_val_loss": best_val_loss, "enable_augmentation": enable_augmentation}
         model.runtime_state["training_wall_seconds"] = training_wall_seconds
 
+    session_start = time.monotonic()
+    session_compute_seconds = 0.0
+    print(f"[train] Starting at update {start_step + 1}/{len(trace)}; "
+          f"effective_batch={train_cfg.effective_batch_size}; "
+          f"trainable={counts['trainable']:,}/{counts['total']:,}; "
+          f"device={device}; bf16={use_bf16}", flush=True)
     model.train()
     for step in range(start_step, len(trace)):
         t0 = time.time()
@@ -320,7 +326,8 @@ def train_diffjev(
         opt.zero_grad(set_to_none=True)
         agg: Dict[str, float] = {}
 
-        for item in batch_spec:
+        last_progress = time.monotonic()
+        for sample_index, item in enumerate(batch_spec, 1):
             rid = item["rid"]
             seen_rids[rid] += 1
             rec = dict(records_by_id[rid])
@@ -360,6 +367,12 @@ def train_diffjev(
             for lk, lv in losses.items():
                 agg[lk] = agg.get(lk, 0.0) + float(lv.detach().item()) / bsz
 
+            now = time.monotonic()
+            if (step == start_step and sample_index == 1) or now - last_progress >= 15:
+                print(f"[train] Update {step + 1}/{len(trace)}: "
+                      f"samples={sample_index}/{bsz} (gradient accumulation)", flush=True)
+                last_progress = now
+
         gnorm = torch.nn.utils.clip_grad_norm_(params, train_cfg.grad_clip)
         if not math.isfinite(float(gnorm)):
             raise FloatingPointError(f"Non-finite gradient norm at step {step}")
@@ -373,13 +386,24 @@ def train_diffjev(
             **agg,
         }
         training_wall_seconds += row["sec"]
+        session_compute_seconds += row["sec"]
+        completed = step - start_step + 1
+        eta = session_compute_seconds / completed * (len(trace) - step - 1)
+        print(f"[train] Update {step + 1}/{len(trace)} complete; "
+              f"loss={row['total']:.6f}; grad_norm={row['grad_norm']:.4f}; "
+              f"update={row['sec']:.1f}s; elapsed={(time.monotonic()-session_start)/3600:.2f}h; "
+              f"remaining_compute_estimate={eta/3600:.2f}h "
+              "(excludes validation/checkpoint I/O/calibration)", flush=True)
 
         if dev_examples and ((step + 1) % eval_every == 0 or step == len(trace) - 1):
+            print(f"[train] Validation starting: {len(dev_examples)} examples", flush=True)
             val_metrics = evaluate_validation(model, dev_examples, seed=train_cfg.seed)
+            print(f"[train] Validation complete; decision_ce={val_metrics['val_decision_ce']:.6f}", flush=True)
             row.update(val_metrics)
             if checkpoint_dir and val_metrics["val_decision_ce"] < best_val_loss:
                 best_val_loss = val_metrics["val_decision_ce"]
                 checkpoint_state()
+                print(f"[train] Saving {checkpoint_dir}/best.pt", flush=True)
                 save_trainable_checkpoint(
                     os.path.join(checkpoint_dir, "best.pt"),
                     model,
@@ -387,15 +411,18 @@ def train_diffjev(
                     step=step,
                     extra_meta={"val": val_metrics},
                 )
+                print("[train] Best checkpoint saved", flush=True)
 
         checkpoint_state()
         if checkpoint_dir and ((step + 1) % save_every == 0 or step == len(trace) - 1):
+            print(f"[train] Saving {checkpoint_dir}/step_{step + 1}.pt", flush=True)
             save_trainable_checkpoint(
                 os.path.join(checkpoint_dir, f"step_{step + 1}.pt"),
                 model,
                 optimizer=opt,
                 step=step,
             )
+            print("[train] Step checkpoint saved", flush=True)
 
         history.append(row)
         if log_fn is not None:

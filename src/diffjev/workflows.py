@@ -295,11 +295,15 @@ def train_run(backbone="llada_8b_base", method="diffjev", variant="full", seed=0
     random.seed(seed);torch.manual_seed(seed)
     import numpy as np
     np.random.seed(seed)
+    print(f"[train] {backbone}/{method}/{variant}; seed={seed}; "
+          f"{'resume=' + str(resume) if resume else 'fresh training from pretrained weights'}", flush=True)
     runner = load_runner(backbone,method,variant,seed,trained=False,device=device)
     tokenizer = runner.backbone.tokenizer
+    print("[train] Reading prepared records, splits and frozen training trace...", flush=True)
     records = {r["rid"]:r for r in read_json(PREPARED/"records.json")}
     manifest,trace = read_json(PREPARED/"manifest.json"),read_json(PREPARED/"trace.json")
     audit = read_json(PREPARED/"audit.json")
+    print("[train] Verifying frozen trace checksum...", flush=True)
     if digest(trace) != audit["trace_sha256"]:
         raise ValueError("Frozen augmentation trace checksum mismatch")
     train_cfg = TrainConfig(seed=seed,optimizer_updates=len(trace))
@@ -308,24 +312,35 @@ def train_run(backbone="llada_8b_base", method="diffjev", variant="full", seed=0
     from .evaluation.sampling import stratified_subset
     dev_records = stratified_subset([records[i] for i in manifest["splits"]["dev"]],256,
                     stratum=lambda r:r["bucket"],identity=lambda r:r["rid"])
-    dev = [_example(tokenizer,r) for r in dev_records]
-    calib = [_example(tokenizer,records[i]) for i in manifest["splits"]["calib"]]
+    dev = [_example(tokenizer,r) for r in progress(dev_records, "Training / tokenize development set")]
+    calib = [_example(tokenizer,records[i]) for i in
+             progress(manifest["splits"]["calib"], "Training / tokenize calibration set")]
     if not dev or {x.mode for x in calib} != {"choice","noul","score"}:
         raise ValueError("Separate development and all-mode calibration partitions are required")
     output = run_directory(backbone,method,variant,seed)
     output.mkdir(parents=True,exist_ok=True)
+    print(f"[train] Output directory: {output}", flush=True)
+    if not resume and any(output.glob("*.pt")):
+        print("[train] Existing checkpoints will NOT be resumed; matching output files "
+              "will be overwritten as this fresh run progresses.", flush=True)
     save_json(output/"run_config.json",{"backbone":bb_provenance(runner),"method":method,
         "variant":variant,"train":train_cfg.to_dict(),"diffjev":runner.cfg.to_dict(),
         "trace_sha256":digest(trace),"environment":environment_record(),
         "verification":runner.backbone.verification,"dev_ids":[r["rid"] for r in dev_records]})
+    print("[train] Reading candidate banks...", flush=True)
+    banks = read_json(PREPARED/"banks.json")
     history,summary = train_diffjev(runner,train_cfg,records,trace,tokenizer,
-        read_json(PREPARED/"banks.json"),dev_examples=dev,checkpoint_dir=str(output),
+        banks,dev_examples=dev,checkpoint_dir=str(output),
         resume_from=resume,enable_augmentation=variant!="no_augmentation")
+    print("[train] Training complete; loading best checkpoint for calibration...", flush=True)
     load_trainable_checkpoint(str(output/"best.pt"),runner)
+    print(f"[train] Calibration starting: {len(calib)} examples, then temperature fitting", flush=True)
     calibration = calibrate_model(runner,calib)
+    print("[train] Calibration complete; saving calibrated checkpoint and reports...", flush=True)
     save_trainable_checkpoint(str(output/"calibrated.pt"),runner,extra_meta={"calibration":calibration,"trace_sha256":digest(trace)})
     save_json(output/"history.json",history)
     save_json(output/"calibration.json",calibration)
+    print(f"[train] Run complete: {output}", flush=True)
     return summary
 
 

@@ -53,12 +53,17 @@ def load_backbone(key, device="cuda", dtype=torch.bfloat16, verify=True):
     cls, kwargs = (LLaDAAdapter, {}) if key.startswith("llada") else (
         (NemotronDiffusionAdapter, {"size":key.split("_")[1].upper()}) if key.startswith("nemotron")
         else (QwenCausalAdapter, {}))
-    adapter = cls.from_local(str(path), torch_dtype=dtype, device_map=None, **kwargs).to(device)
+    print(f"[model] Loading {key} from local snapshot...", flush=True)
+    adapter = cls.from_local(str(path), torch_dtype=dtype, device_map=None, **kwargs)
+    print(f"[model] Weights loaded; moving model to {device}...", flush=True)
+    adapter = adapter.to(device)
     adapter.provenance = provenance
     cfg = adapter.hf_model.config
     adapter.max_context_tokens = int(getattr(cfg,"max_position_embeddings",getattr(cfg,"max_sequence_length",4096)))
     if verify:
+        print("[model] Checking adapter invariants and native block parity...", flush=True)
         adapter.verification = {"invariants":adapter.verify_adapter(), "native_parity":adapter.verify_native_parity()}
+        print("[model] Adapter checks passed", flush=True)
     return adapter
 
 
